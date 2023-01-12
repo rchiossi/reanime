@@ -1,7 +1,7 @@
 import argparse
 import os
-
 from typing import Optional
+
 from fuzzywuzzy import fuzz
 
 
@@ -54,22 +54,26 @@ class Anime:
 
 
 class AnimeCollection:
-    def __init__(self, source: str):
+    def __init__(self, source: str, titles: Optional[list] = None):
         self.source = source
         self.anime_list = list()
         self.mapping = dict()
 
-        self.__init_anime_list()
+        if not titles:
+            titles = self.__get_directory_list()
+        self.__init_anime_list(titles)
 
     def refresh_mapping(self):
         self.mapping = dict()
         self.__map_clean_title()
 
     def __get_directory_list(self) -> list:
-        return [d for d in os.listdir(self.source) if os.path.isdir(f'{self.source}/{d}')]
+        try:
+            return [d for d in os.listdir(self.source) if os.path.isdir(f'{self.source}/{d}')]
+        except FileNotFoundError:
+            return []
 
-    def __init_anime_list(self):
-        titles = self.__get_directory_list()
+    def __init_anime_list(self, titles: list):
         for title in titles:
             self.anime_list.append(Anime(title, self.source))
 
@@ -148,6 +152,36 @@ def main():
         for item in val:
             print(f'  {item.title}')
     print()
+
+
+def test_find_duplicates():
+    with open("directories.in", "r") as f:
+        titles = f.read().split('\n')
+
+    collection = AnimeCollection("", titles)
+    collection.refresh_mapping()
+
+    duplicates = collection.find_duplicates()
+
+    print("Duplicates -------")
+
+    for duplicate in duplicates:
+        print(f'{duplicate}:')
+        for item in collection.mapping[duplicate]:
+            print(f'  {item}')
+    print()
+
+    print("Similar ----------")
+    similars = collection.find_similars()
+    for key, val in similars.items():
+        if len(val) == 1:
+            continue
+
+        print(f'{key}:')
+        for item in val:
+            print(f'  {item.title}')
+    print()
+    pass
 
 
 if __name__ == "__main__":
